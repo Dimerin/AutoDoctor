@@ -1,12 +1,19 @@
 ## First idea:
-- Intelligent monitoring of human health conditions during autonomous car-sharing services. It employes sensors able to detect possible anomalies in passengers health values. Possibility to take vital choices for increasing surviving chances for passengers. Equip the vehicle with the ability to automatically contact emergency services and provide real-time data (location, passenger health status, etc.) in case of an accident or medical emergency.
+- Intelligent monitoring of human health conditions during autonomous car-sharing services. It employes sensors able to detect possible anomalies in passengers health values. Possibility to take vital choices for increasing surviving chances for passengers. Equip the vehicle with the ability to automatically contact emergency services and provide real-time data (location, passenger health status, etc.) in case of an accident or medical emergency. Analysis and report on the environmental situation inside the cabin.
 
 - IR fever detection, camera, possible FER for disease recognition and heart-beat analysis.
+  
 [Forbes Fatalities Car Accidents](https://www.forbes.com/advisor/legal/auto-accident/car-accident-statistics/)
 
 [InCabin Monitoring Scholars](https://www.mdpi.com/1424-8220/22/12/4360)
 
 [Real-time Facial Expression Recognition on Robot for Healthcare](https://ieeexplore.ieee.org/document/8535710)
+
+[Innovation in automotive business health monitoring driver FORD](https://spectrum.ieee.org/3-ways-ford-cars-could-monitor-your-health)
+
+[Ford Develops Heart Rate Monitoring Car Seat](https://www.dicardiology.com/content/ford-develops-heart-rate-monitoring-car-seat)
+
+
 
 
 
