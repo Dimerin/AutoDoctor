@@ -30,3 +30,25 @@ Intelligent monitoring of human health conditions during autonomous car-sharing 
 [Mercedes strategy to decrease accidents](https://group.mercedes-benz.com/innovation/product-innovation/technology/accident-free-driving.html)
 
 [Mercedes S-Class Health Monitoring](https://www.mercedes-benz-mississauga.ca/meet-the-s-class-digital-luxury-well-being/)
+
+# PROJECT OVERVIEW
+
+1. **Select the personnel**:
+  - Who do I need for this and what programming language.
+2. **How much does it cost to realize this project?**
+  With this, we estimate how much money is needed and when it is needed:
+  1. Quantify how many hours are necessary to develop the software. The hours are an estimate.
+  2. When do we need the resources? We cannot keep an expert in testing idle when we do not need to test.
+3. **Identify the risks**:
+  It is not credible that a project has no risks (do not say this). It may be that a technology becomes obsolete by the time it enters the market. For each risk of this type, a strategy to reduce the risk and mitigate the effects is identified.
+  1. Identification of the risk.
+  2. Identification of strategies to resolve the risk.
+  3. Calculation of the costs to implement the strategy.
+
+## Presentation
+1. *State of the art*: risk of making it incomplete.
+2. *Find the technology to implement the project*: we cannot spend too much on hardware implementation; take what is needed and nothing more.
+
+Work package: it exists throughout the life of the product, once a month we meet to see that
+
+RICORDA: **CoDiFiCaRE NoN è iL FuTuRo!**
