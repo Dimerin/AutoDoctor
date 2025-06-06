@@ -1,80 +1,99 @@
-import subprocess
-import threading
+import sounddevice as sd
 import vlc
 import time
-class VoiceAgent:
-    def __init__(self, time_window=3):
-        # initialize parameters
-        self.time_window = time_window # in seconds
-        self.binary_path = "../../bin/"
-        self.media_path = "../../media/"
-        self.command = [self.binary_path + "whisper_stream_win/stream", "-m", self.binary_path + "whisper_stream_win/ggml-model-whisper-base.en.bin", "--length", "3", "--language", "it"]
-        # Output list to store transcriptions
-        self.transcriptions = []
-        # Whisper process
-        self._transcription_process = None
-        self._stdout_thread = None        # Wait for the thread to finish
-        self._lastchecked = 0 # Last checked index for transcriptions
-        pass
-    
-    def _read_stream_output(self, process):
-        exclude_keywords = ["audio_sdl_init", "whisper_model_load", "SDL_main"]
-        while True:
-            line = process.stdout.readline()
-            if not line:
-                break
-            decoded_line = line.decode("utf-8").strip()
-            if decoded_line:
-                if any(keyword in decoded_line for keyword in exclude_keywords):
-                    continue  # Ignora righe di log tecnico
-                self.transcriptions.append(decoded_line)
-         
-    def start(self):
-        # Avvia il processo
-        if self._transcription_process is not None:
-            print("Il processo di riconoscimento vocale è già in esecuzione.")
-            return
-        self._transcription_process  = subprocess.Popen(
-            self.command,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            bufsize=1
-        )
+import requests
+from scipy.io.wavfile import write
+import uuid
+from pathlib import Path
+import threading
 
-        # Thread per leggere l'output in tempo reale
-        self._stdout_thread = threading.Thread(target=self._read_stream_output, args=(self._transcription_process,))
-        self._stdout_thread.start()
+class VoiceAgent:
+    def __init__(self, server_url="http://localhost:8080/inference", sample_rate=16000):
+        self.server_url = server_url
+        self.sample_rate = sample_rate
+        self.tmp_dir = Path("tmp")
+        self.tmp_dir.mkdir(exist_ok=True)
+        self.media_path = Path("../../media")  # Assuming media files are stored in a 'media' directory
+
+    def _genera_nome_file(self):
+        return self.tmp_dir / f"{uuid.uuid4().hex}.wav"
+
+    def _record_audio(self, durata_sec=5):
+        output_file = self._genera_nome_file()
+        print(f"[INFO] Inizio registrazione per {durata_sec} secondi...")
+        audio = sd.rec(int(durata_sec * self.sample_rate), samplerate=self.sample_rate, channels=1, dtype='int16')
+        sd.wait()
+        write(str(output_file), self.sample_rate, audio)
+        print(f"[INFO] Audio salvato in '{output_file}'")
+        return output_file
+
+    def _send_audio(self, file_path, extra_params=None):
+        if not file_path.is_file():
+            raise FileNotFoundError(f"Il file '{file_path}' non esiste.")
+
+        print(f"[INFO] Invio del file '{file_path.name}' al server whisper.cpp...")
+        try:
+            with open(file_path, 'rb') as f:
+                files = {'file': f}
+                response = requests.post(
+                    self.server_url,
+                    files=files, 
+                    data=extra_params)
+
+            if response.status_code == 200:
+                result = response.json()
+                testo = result.get("text", "")
+                print("[INFO] Trascrizione completata:")
+                print(testo or "(nessun testo)")
+                return testo
+            else:
+                print(f"[ERRORE] Risposta HTTP {response.status_code}")
+                print(response.text)
+                return None
+        finally:
+            # Pulizia file temporaneo
+            try:
+                file_path.unlink()
+                print(f"[INFO] File temporaneo '{file_path.name}' eliminato.")
+            except Exception as e:
+                print(f"[WARN] Impossibile eliminare il file temporaneo: {e}")
     
-    def wait_for_response(self):
-        self._lastchecked = 0
-        while True:
-            # Check only new transcriptions
-            new_transcriptions = self.transcriptions[self._lastchecked:]
-            for t in new_transcriptions:
-                if "yes" in t.lower():
-                    return True
-                if "no" in t.lower():
-                    return False
-            self._lastchecked += len(new_transcriptions)
-            if self._transcription_process.poll() is not None:
-                break
-    
-    def say_question(self, question):
-        
+    def _reproduce_question(self, question):           
         def play_audio():
             if question == 1:
-                player = vlc.MediaPlayer(self.media_path + "How-are-you.mp3")
+                player = vlc.MediaPlayer(str(self.media_path / "How-are-you.mp3"))
                 player.play()
             time.sleep(5)
 
         audio_thread = threading.Thread(target=play_audio)
         audio_thread.start()
         audio_thread.join()  # Attende che il thread termini prima di proseguire
+    
+    def _process_text(self, text):
+        text = text.lower().strip()
+        if any(word in text for word in ["sì", "si", "yes", "yep", "yeah"]):
+            print("[INFO] L'utente ha risposto: SÌ")
+            return 1
+        elif any(word in text for word in ["no", "nope", "nah"]):
+            print("[INFO] L'utente ha risposto: NO")
+            return 0
+        else:
+            print("[INFO] Risposta non riconosciuta come sì o no.")
+            return -1
 
-
-    def stop(self):
-        # Termina il processo e attende la fine del thread
-        if self._transcription_process is None:
-            print("Il processo di riconoscimento vocale non è in esecuzione.")
+    def start_protocol(self, duration=5):
+        print("[INFO] Avvio del protocollo di registrazione e trascrizione...")
+        print("[INFO] ASking the user to speak...")
+        self._reproduce_question(1)
+        print("[INFO] Start recording and transcription...")
+        file = self._record_audio(duration)
+        testo = self._send_audio(file)
+        if testo:
+            print(f"[INFO] Risultato della trascrizione: {testo}")
+        else:
+            print("[ERRORE] Trascrizione fallita.")
             return
-        self._transcription_process.terminate()
+        print("[INFO] Start processing...")
+        result = self._process_text(testo)
+        print("[INFO] Protocollo completato.")
+        return result
