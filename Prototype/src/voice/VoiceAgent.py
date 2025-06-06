@@ -63,7 +63,7 @@ class VoiceAgent:
             if question == 1:
                 player = vlc.MediaPlayer(str(self.media_path / "How-are-you.mp3"))
                 player.play()
-            time.sleep(5)
+            time.sleep(2)  # Attendi che l'audio inizi a riprodursi
 
         audio_thread = threading.Thread(target=play_audio)
         audio_thread.start()
