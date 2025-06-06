@@ -1,7 +1,9 @@
+from picamera2 import Picamera2
 import cv2
 import dlib
 import numpy as np
 from collections import deque
+import time
 
 # EAR calculation
 def calculate_ear(eye):
@@ -15,9 +17,9 @@ LEFT_EYE_IDX = list(range(36, 42))
 RIGHT_EYE_IDX = list(range(42, 48))
 EAR_THRESHOLD_CLOSED = 0.15
 EAR_THRESHOLD_SLIGHTLY_CLOSED = 0.22
-MOVEMENT_THRESHOLD = 1.0  # Pixels
-SMOOTH_FRAMES = 3         # How many frames to consider
-STATIONARY_THRESHOLD = 3  # Require at least 3 low-movement frames
+MOVEMENT_THRESHOLD = 10.0
+SMOOTH_FRAMES = 3
+STATIONARY_THRESHOLD = 3
 
 # Optical Flow settings
 lk_params = dict(winSize=(15, 15), maxLevel=2,
@@ -32,17 +34,23 @@ prev_points = None
 prev_gray = None
 movement_history = deque(maxlen=SMOOTH_FRAMES)
 
-# Add video writer setup
+# Inizializza Picamera2
+picam2 = Picamera2()
+picam2.preview_configuration.main.size = (640, 480)
+picam2.preview_configuration.main.format = "RGB888"
+picam2.configure("preview")
+picam2.start()
+time.sleep(1)
+
+# Video writer
 fourcc = cv2.VideoWriter_fourcc(*'XVID')
 out = cv2.VideoWriter('eye_tracking_output.avi', fourcc, 20.0, (640, 480))
 
-cap = cv2.VideoCapture(0)
-
 while True:
-    ret, frame = cap.read()
-    if not ret:
-        break
+    start_time = time.time()  # Per calcolo FPS
 
+    frame = picam2.capture_array()
+    frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
     frame_gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     faces = detector(frame_gray)
 
@@ -64,7 +72,6 @@ while True:
         else:
             eye_state = "Open"
 
-        # Optical flow init
         if prev_points is None:
             points = np.vstack((left_eye_pts, right_eye_pts)).reshape(-1, 1, 2)
             prev_points = points
@@ -72,27 +79,23 @@ while True:
             movement_status = "Initializing..."
             movement_history.clear()
         else:
-            # Optical flow
             next_points, status, _ = cv2.calcOpticalFlowPyrLK(prev_gray, frame_gray, prev_points, None, **lk_params)
             good_prev = prev_points[status == 1]
             good_next = next_points[status == 1]
 
-            # Draw flow points
             for (x, y) in good_next:
                 cv2.circle(frame, (int(x), int(y)), 2, (0, 255, 0), -1)
 
             movement = np.mean(np.linalg.norm(good_next - good_prev, axis=1))
             movement_history.append(movement)
 
-        
-            # Smoothed movement classification using average movement
             avg_movement = np.mean(movement_history)
+            print(f"Average Movement: {avg_movement:.2f}")
             if avg_movement > MOVEMENT_THRESHOLD:
                 movement_status = "Moving"
             else:
                 movement_status = "Stationary"
 
-            # Update for next frame
             prev_points = good_next.reshape(-1, 1, 2)
             prev_gray = frame_gray.copy()
     else:
@@ -101,15 +104,19 @@ while True:
         prev_points = None
         movement_history.clear()
 
-    # Ensure text overlays are added before writing the frame
+    # Calcolo FPS
+    end_time = time.time()
+    fps = 1 / (end_time - start_time)
+
+    # Annotazioni
     cv2.putText(frame, f"Eye Movement: {movement_status}", (10, 30),
                 cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 255, 0), 2)
     cv2.putText(frame, f"Eye State: {eye_state}", (10, 60),
                 cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2)
+    cv2.putText(frame, f"FPS: {fps:.2f}", (10, 90),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 255), 2)
 
-    # Write the frame to the video file
     out.write(frame)
-
     cv2.imshow("Eye State + Smooth Movement Detection", frame)
 
     key = cv2.waitKey(1)
@@ -120,6 +127,5 @@ while True:
         prev_gray = None
         movement_history.clear()
 
-cap.release()
 out.release()
 cv2.destroyAllWindows()
