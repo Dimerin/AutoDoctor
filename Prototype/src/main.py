@@ -319,13 +319,13 @@ class App(customtkinter.CTk):
             for i, fps in enumerate(self.fps_list):
                 writer.writerow([i, fps])
         
-        with open(f"../dump/cpu_ram_swap_{time_stamp}.csv", "w", newline="") as csvfile:
+        with open(f"../dump/cpu_ram_swap_{self.inference_var.get()}_{time_stamp}.csv", "w", newline="") as csvfile:
             writer = csv.writer(csvfile)
             writer.writerow(["ID", "CPU_percent", "RAM_percent"," SWAP_percent"])
             for i, (cpu, ram, swap) in enumerate(zip(self.cpu_list, self.ram_list, self.swap_list)):
                 writer.writerow([i, cpu, ram, swap])
         
-        with open(f"../dump/inference_time_{time_stamp}.csv", "w", newline="") as csvfile:
+        with open(f"../dump/inference_time_{self.inference_var.get()}_{time_stamp}.csv", "w", newline="") as csvfile:
             writer = csv.writer(csvfile)
             writer.writerow(["ID", "Inference_Time"])
             for i, inference_time in enumerate(self.inference_time_list):
