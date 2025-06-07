@@ -43,11 +43,11 @@ class HeartRateSensor:
             interval = current_time - self._last_pulse_time
             if interval > 0:
                 bpm = 60 / interval
-                print(f"Battito rilevato (INT): BPM = {bpm:.1f}")
+                #print(f"Battito rilevato (INT): BPM = {bpm:.1f}")
                 with self._semaphore_hr:
                     self._last_heart_rate_sample = bpm
-        else:
-            print("Primo impulso rilevato (INT)...")
+ 
+                # print("Primo impulso rilevato (INT)...")
 
         self._last_pulse_time = current_time
         self.blink()
