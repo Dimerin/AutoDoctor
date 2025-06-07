@@ -28,70 +28,91 @@ class App(customtkinter.CTk):
         self.ram_list = []
 
 
-        self.camera_frame = customtkinter.CTkFrame(self, width=640, height=480)
-        self.camera_frame.pack(side="left", padx=20, pady=20)
+        # FRAME CONTENITORE RIGA 1
+        self.top_frame = customtkinter.CTkFrame(self)
+        self.top_frame.grid(row=0, column=0, sticky="nsew", padx=20, pady=(10,5))
+
+        # FRAME CONTENITORE RIGA 2
+        self.bottom_frame = customtkinter.CTkFrame(self)
+        self.bottom_frame.grid(row=1, column=0, sticky="ew", padx=20, pady=(0, 20))
+
+        # CONFIGURAZIONE PESI PER RIDIMENSIONAMENTO AUTOMATICO
+        self.grid_rowconfigure(0, weight=1)
+        self.grid_rowconfigure(1, weight=0)
+        self.grid_columnconfigure(0, weight=1)
+
+        # FRAME SINISTRO (CAMERA) NELLA PRIMA RIGA
+        self.camera_frame = customtkinter.CTkFrame(self.top_frame, width=640, height=480)
+        self.camera_frame.grid(row=0, column=0, padx=10, pady=10, sticky="n")
+
         self.camera_label = customtkinter.CTkLabel(self.camera_frame, text="")
         self.camera_label.pack(padx=10, pady=10)
 
-        self.eye_frame = customtkinter.CTkFrame(self)
-        self.eye_frame.pack(padx=20, pady=(40, 10), fill="x")
+        # FRAME DESTRO (DATI) NELLA PRIMA RIGA
+        self.data_frame = customtkinter.CTkFrame(self.top_frame)
+        self.data_frame.grid(row=0, column=1, padx=10, pady=10, sticky="n")
 
-        self.movement_frame = customtkinter.CTkFrame(self)
-        self.movement_frame.pack(padx=20, pady=10, fill="x")
-
-        self.heart_rate_frame = customtkinter.CTkFrame(self)
-        self.heart_rate_frame.pack(padx=20, pady=10, fill="x")
-
-        self.fps_frame = customtkinter.CTkFrame(self)
-        self.fps_frame.pack(padx=20, pady=10, fill="x")
-        self.fps_label = customtkinter.CTkLabel(
-            self.fps_frame, 
-            text="FPS: 0", 
-            font=("Arial", 20)
-        )
-        self.fps_label.pack(padx=10, pady=10, fill="x")
-
-
-        self.eye_status = customtkinter.CTkEntry(
-        self.eye_frame,
-        placeholder_text="No eye detected",
-        height=50,
-        font=("Arial", 20),
-        corner_radius=10
+        # EYE FRAME
+        self.eye_frame = customtkinter.CTkFrame(self.data_frame)
+        self.eye_frame.pack(padx=10, pady=(20, 10), fill="x")
+        self.eye_status = customtkinter.CTkLabel(
+            self.eye_frame,
+            text="No eye detected",
+            height=50,
+            font=("Arial", 20),
+            corner_radius=10
         )
         self.eye_status.pack(padx=10, pady=10, fill="x")
-        
-        self.movement_status = customtkinter.CTkEntry(
+
+        # MOVEMENT FRAME
+        self.movement_frame = customtkinter.CTkFrame(self.data_frame)
+        self.movement_frame.pack(padx=10, pady=10, fill="x")
+        self.movement_status = customtkinter.CTkLabel(
             self.movement_frame,
-            placeholder_text="No movement detected",
+            text="No movement detected",
             height=50,
             font=("Arial", 20),
             corner_radius=10
         )
         self.movement_status.pack(padx=10, pady=10, fill="x")
-        
-        self.heart_rate_status = customtkinter.CTkEntry(
+
+        # HEART RATE FRAME
+        self.heart_rate_frame = customtkinter.CTkFrame(self.data_frame)
+        self.heart_rate_frame.pack(padx=10, pady=10, fill="x")
+        self.heart_rate_status = customtkinter.CTkLabel(
             self.heart_rate_frame,
-            placeholder_text="Heart Rate: Waiting for data...",
+            text="Heart Rate: Waiting for data...",
             height=50,
             font=("Arial", 20),
             corner_radius=10
         )
         self.heart_rate_status.pack(padx=10, pady=10, fill="x")
 
+        # FPS FRAME
+        self.fps_frame = customtkinter.CTkFrame(self.data_frame)
+        self.fps_frame.pack(padx=10, pady=10, fill="x")
+        self.fps_label = customtkinter.CTkLabel(
+            self.fps_frame,
+            text="FPS: 0",
+            font=("Arial", 20)
+        )
+        self.fps_label.pack(padx=10, pady=10, fill="x")
+
+        # RIGA 2: RISPOSTA E BOTTONE
+        self.answer_label = customtkinter.CTkLabel(
+            self.bottom_frame,
+            text="User Answer: Waiting for interaction...",
+            font=("Arial", 20),
+            anchor="w"
+        )
+        self.answer_label.pack(side="left", padx=10, pady=10, fill="x", expand=True)
+
         self.voice_button = customtkinter.CTkButton(
-            self,
+            self.bottom_frame,
             text="Start Voice Interaction",
             command=self.voice_agent
         )
-        self.voice_button.pack(padx=10, pady=10, fill="x")
-
-        self.answer_label = customtkinter.CTkLabel(
-            self,
-            text="User Answer: Waiting for interaction...",
-            font=("Arial", 20)
-        )
-        self.answer_label.pack(padx=10, pady=10, fill="x")
+        self.voice_button.pack(side="right", padx=10, pady=10)
 
         self.running = True
         self.tracker = EyeTracker("eyes/shape_predictor_68_face_landmarks.dat")
@@ -129,24 +150,19 @@ class App(customtkinter.CTk):
             self.after(0, self.update_gui_video, ctk_img, eye_state, movement_status,fps)
 
 
-
     def update_gui_video(self, ctk_img, eye_state, movement_status, fps):
         self.camera_label.configure(image=ctk_img)
         self.camera_label.image = ctk_img
-        self.eye_status.delete(0, "end")
-        self.eye_status.insert(0, eye_state)
-        self.movement_status.delete(0, "end")
-        self.movement_status.insert(0, movement_status)
+        self.eye_status.configure(text=eye_state)
+        self.movement_status.configure(text=movement_status)
         self.fps_label.configure(text=f"FPS: {fps:.2f}")
-       
+
     def update_gui_heart_rate(self):
         if self.last_heart_rate_sample is not None:
-            self.heart_rate_status.delete(0, "end")
-            self.heart_rate_status.insert(0, f"Heart Rate: {self.last_heart_rate_sample:.1f} BPM")
+            self.heart_rate_status.configure(text=f"Heart Rate: {self.last_heart_rate_sample:.1f} BPM")
         else:
-            self.heart_rate_status.delete(0, "end")
-            self.heart_rate_status.insert(0, "Heart Rate: Waiting for data...")
-
+            self.heart_rate_status.configure(text="Heart Rate: Waiting for data...")
+            
     def voice_agent(self):
         self.voice_agent = VoiceAgent()
         self.user_answer = self.voice_agent.start_protocol(duration=5)
@@ -180,6 +196,7 @@ class App(customtkinter.CTk):
     def on_closing(self):
         print("Closing application...")
         self.running = False
+        print("Dumping data...")
         self.dump_data()
         self.heart_rate_sensor.cleanup()
         self.destroy()
