@@ -8,7 +8,10 @@ class HeartRateSensor:
         self._gpio_pin_hr = gpio_pin_hr
         self._gpio_pin_led = gpio_pin_led
         self._last_pulse_time = None
+        self._last_heart_rate_sample = None
         
+        # Semaphore init for multithreading
+        self._semaphore_hr = threading.Lock()
         self.blink_thread = threading.Thread(target=self._blinking, daemon=True)
         self.blinking_condition = threading.Condition()
 
@@ -41,6 +44,8 @@ class HeartRateSensor:
             if interval > 0:
                 bpm = 60 / interval
                 print(f"Battito rilevato (INT): BPM = {bpm:.1f}")
+                with self._semaphore_hr:
+                    self._last_heart_rate_sample = bpm
         else:
             print("Primo impulso rilevato (INT)...")
 
@@ -54,6 +59,13 @@ class HeartRateSensor:
             GPIO.output(self._gpio_pin_led, GPIO.HIGH)
             Time.sleep(0.3)
             GPIO.output(self._gpio_pin_led, GPIO.LOW)
+
+    def get_heart_rate(self):
+        with self._semaphore_hr:
+            if self._last_heart_rate_sample is not None:
+                return self._last_heart_rate_sample
+            else:
+                return 0.0
                 
     def cleanup(self):
         GPIO.cleanup(self._gpio_pin_hr)
