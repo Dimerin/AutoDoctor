@@ -8,8 +8,7 @@ from pathlib import Path
 import threading
 
 class VoiceAgent:
-    def __init__(self, server_url="http://192.168.1.105:8080/inference", sample_rate=16000):
-        self.server_url = server_url
+    def __init__(self,  sample_rate=16000):
         self.sample_rate = sample_rate
         self.tmp_dir = Path("tmp")
         self.tmp_dir.mkdir(exist_ok=True)
@@ -81,18 +80,23 @@ class VoiceAgent:
             print("[INFO] Risposta non riconosciuta come sì o no.")
             return -1
 
-    def start_protocol(self, duration=5):
+    def start_protocol(self, server_url, duration=5):
+        self.server_url = server_url
         print("[INFO] Avvio del protocollo di registrazione e trascrizione...")
-        print("[INFO] ASking the user to speak...")
+        print("[INFO] Asking the user to speak...")
         self._reproduce_question(1)
         print("[INFO] Start recording and transcription...")
         file = self._record_audio(duration)
-        testo = self._send_audio(file)
+        try:
+            testo = self._send_audio(file)
+        except Exception as e:
+            print(f"[ERRORE] Si è verificato un errore durante l'invio del file: {e}")
+            return -2
         if testo:
             print(f"[INFO] Risultato della trascrizione: {testo}")
         else:
             print("[ERRORE] Trascrizione fallita.")
-            return
+            return -3
         print("[INFO] Start processing...")
         result = self._process_text(testo)
         print("[INFO] Protocollo completato.")
