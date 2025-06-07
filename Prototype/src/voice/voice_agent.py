@@ -8,12 +8,12 @@ from pathlib import Path
 import threading
 
 class VoiceAgent:
-    def __init__(self, server_url="http://localhost:8080/inference", sample_rate=16000):
+    def __init__(self, server_url="http://192.168.1.105:8080/inference", sample_rate=16000):
         self.server_url = server_url
         self.sample_rate = sample_rate
         self.tmp_dir = Path("tmp")
         self.tmp_dir.mkdir(exist_ok=True)
-        self.media_path = Path("../../media")  # Assuming media files are stored in a 'media' directory
+        self.media_path = Path("../media")  # Assuming media files are stored in a 'media' directory
 
     def _genera_nome_file(self):
         return self.tmp_dir / f"{uuid.uuid4().hex}.wav"
