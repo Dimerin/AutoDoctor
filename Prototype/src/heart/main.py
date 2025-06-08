@@ -2,7 +2,7 @@ import time as Time
 from heart_rate_sensor import HeartRateSensor
 
 if __name__ == "__main__":
-    heart_rate_sensor = HeartRateSensor(gpio_pin_hr=4, gpio_pin_led=17)
+    heart_rate_sensor = HeartRateSensor(gpio_pin_hr=4)
     heart_rate_sensor.setup()
 
     try:

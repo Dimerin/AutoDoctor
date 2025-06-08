@@ -4,25 +4,17 @@ import RPi.GPIO as GPIO
 
 class HeartRateSensor:
     
-    def __init__(self, gpio_pin_hr : int, gpio_pin_led : int):
+    def __init__(self, gpio_pin_hr : int):
         self._gpio_pin_hr = gpio_pin_hr
-        self._gpio_pin_led = gpio_pin_led
         self._last_pulse_time = None
         self._last_heart_rate_sample = None
-        
-        # Semaphore init for multithreading
         self._semaphore_hr = threading.Lock()
-        self.blink_thread = threading.Thread(target=self._blinking, daemon=True)
-        self.blinking_condition = threading.Condition()
 
     def setup(self):
         GPIO.setmode(GPIO.BCM)
         GPIO.setwarnings(False)
 
         GPIO.setup(self._gpio_pin_hr, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)         
-        GPIO.setup(self._gpio_pin_led, GPIO.OUT)
-                
-        self.blink_thread.start()
         
         GPIO.add_event_detect(
             self._gpio_pin_hr,
@@ -30,10 +22,6 @@ class HeartRateSensor:
             callback=self._default_ISR,
             bouncetime=260
         )
-
-    def blink(self):
-        with self.blinking_condition:
-            self.blinking_condition.notify()
         
     def _default_ISR(self, channel):
         if channel != self._gpio_pin_hr:
@@ -50,15 +38,6 @@ class HeartRateSensor:
                 # print("Primo impulso rilevato (INT)...")
 
         self._last_pulse_time = current_time
-        self.blink()
-        
-    def _blinking(self):
-        while True:
-            with self.blinking_condition:
-                self.blinking_condition.wait()
-            GPIO.output(self._gpio_pin_led, GPIO.HIGH)
-            Time.sleep(0.3)
-            GPIO.output(self._gpio_pin_led, GPIO.LOW)
 
     def get_heart_rate(self):
         with self._semaphore_hr:
@@ -69,10 +48,3 @@ class HeartRateSensor:
                 
     def cleanup(self):
         GPIO.cleanup(self._gpio_pin_hr)
-        
-        if self.blink_thread.is_alive():
-            with self.blinking_condition:
-                self.blinking_condition.notify()
-            self.blink_thread.join(timeout=1)
-    
-        GPIO.cleanup(self._gpio_pin_led)

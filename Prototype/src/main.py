@@ -11,11 +11,16 @@ from voice import VoiceAgent
 import threading
 from collections import Counter
 import statistics
+import RPi.GPIO as GPIO
 
 
 customtkinter.set_appearance_mode("dark")
 
 class App(customtkinter.CTk):
+    
+    GPIO_PIN_LED = 17
+    GPIO_PIN_HR = 4
+    
     def __init__(self):
         super().__init__()
         self.geometry("1152x600")
@@ -190,15 +195,21 @@ class App(customtkinter.CTk):
             command=lambda: threading.Thread(target=self.start_voice_interaction, daemon=True).start()
         )
         self.voice_button.pack(side="right", padx=10, pady=10)   
+
+        GPIO.setmode(GPIO.BCM)
+        GPIO.setwarnings(False)
+        GPIO.setup(self.GPIO_PIN_LED, GPIO.OUT)
         self.running = True
+
         self.tracker = EyeTracker("eyes/shape_predictor_68_face_landmarks.dat")
         self.camera = CameraHandler()
-        self.heart_rate_sensor = HeartRateSensor(gpio_pin_hr=4, gpio_pin_led=17)
+        self.heart_rate_sensor = HeartRateSensor(gpio_pin_hr=self.GPIO_PIN_HR)
         self.voice_agent = VoiceAgent()
         self.heart_rate_sensor.setup()
         self.video_thread = threading.Thread(target=self.update_window, daemon=True)
         self.video_thread.start()
         self.monitor_resources()
+        
  
     def update_window(self):
         self.prev_time = time.time()
@@ -278,26 +289,39 @@ class App(customtkinter.CTk):
             self.heart_rate_status.configure(text="  Heart Rate: Waiting for data...", text_color="white")
             
     def start_voice_interaction(self):
+        print("[INFO] Starting protocol ...")
         self.sampling = True
+        GPIO.output(self.GPIO_PIN_LED, GPIO.HIGH)
+        
         self.voice_button.configure(state="disabled")
         self.voice_button.configure(text="Listening...")
-        starting_time = time.time()
+        
         if self.inference_var.get() == "local":
             server_url = "http://localhost:8080/inference"
         else:
             server_url = "http://192.168.1.105:8080/inference"
         
-        self.user_answer = self.voice_agent.start_protocol(server_url=server_url,duration=5)
+        starting_time = time.time()
+        self.user_answer = self.voice_agent.start_protocol(
+            server_url=server_url,duration=5
+        )        
         elapsed_time = time.time() - starting_time
-        self.inference_time_list.append(elapsed_time)
-        self.sampling = False
+        self.inference_time_list.append(elapsed_time)       
+        
         self.user_answers_list.append(self.user_answer)
         if self.user_answer == -1:
             self.answer_label.configure(text="User Answer: Not recognized")
         elif self.user_answer == -2 or self.user_answer == -3:
             self.answer_label.configure(text="User Answer: Server Error")
         else:
-            self.answer_label.configure(text=f"User Answer: {'Yes' if self.user_answer == 1 else 'No'}")
+            self.answer_label.configure(
+                text=f"User Answer: {'Yes' if self.user_answer == 1 else 'No'}"
+            )
+        
+        self.sampling = False
+        print(f"[INFO] Ending protocol ...")
+        GPIO.output(self.GPIO_PIN_LED, GPIO.LOW)
+        
         self.voice_button.configure(state="normal")
         self.voice_button.configure(text="Start Voice Interaction")
 
@@ -393,6 +417,7 @@ class App(customtkinter.CTk):
         print("Dumping data...")
         self.dump_data()
         self.heart_rate_sensor.cleanup()
+        GPIO.cleanup(self.GPIO_PIN_LED)
         self.destroy()
 
 if __name__ == "__main__":
