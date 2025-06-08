@@ -29,16 +29,16 @@ class App(customtkinter.CTk):
         self.last_heart_rate_sample = None
         self.prev_time = None
         self.fps = 0
-        self.eyes_status_list = []
-        self.movement_status_list = []
         self.heart_rate_status_list = []
+        self.movement_status_list = []
+        self.inference_time_list = []
         self.user_answers_list = []
+        self.eyes_status_list = []
+        self.swap_list = []
         self.fps_list = []
         self.cpu_list = []
         self.ram_list = []
-        self.swap_list = []
         self.sampling = False
-        self.inference_time_list = []
             
         self.eye_icons = {
             "open": customtkinter.CTkImage(light_image=Image.open("assets/eye_open.png"), size=(50, 50)),
@@ -182,17 +182,10 @@ class App(customtkinter.CTk):
         )
         self.gcs_label.pack(side="left", padx=10, pady=10, fill="x", expand=True)
 
-        self.gcs_button = customtkinter.CTkButton(
-            self.bottom_frame,
-            text="Estimate GCS",
-            command=self.glasgow_coma_scale_estimation
-        )
-        self.gcs_button.pack(side="right", padx=10, pady=10)
-
         self.voice_button = customtkinter.CTkButton(
             self.bottom_frame,
             text="Start Voice Interaction",
-            command=lambda: threading.Thread(target=self.start_voice_interaction, daemon=True).start()
+            command=lambda: threading.Thread(target=self.start_gcs_protocol, daemon=True).start()
         )
         self.voice_button.pack(side="right", padx=10, pady=10)   
 
@@ -207,9 +200,7 @@ class App(customtkinter.CTk):
         self.voice_agent = VoiceAgent()
         self.heart_rate_sensor.setup()
         self.video_thread = threading.Thread(target=self.update_window, daemon=True)
-        self.video_thread.start()
-        self.monitor_resources()
-        
+        self.video_thread.start()        
  
     def update_window(self):
         self.prev_time = time.time()
@@ -225,7 +216,8 @@ class App(customtkinter.CTk):
 
             fps = 1 / (current_time - self.prev_time) if self.prev_time else 0
             self.prev_time = current_time
-            self.fps_list.append(fps)
+            if self.sampling:
+                self.fps_list.append(fps)
 
             frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             img = Image.fromarray(frame_rgb)
@@ -288,10 +280,12 @@ class App(customtkinter.CTk):
         else:
             self.heart_rate_status.configure(text="  Heart Rate: Waiting for data...", text_color="white")
             
-    def start_voice_interaction(self):
+    def start_gcs_protocol(self):
         print("[INFO] Starting protocol ...")
         self.sampling = True
         GPIO.output(self.GPIO_PIN_LED, GPIO.HIGH)
+        
+        self.monitor_resources() ## todo: switch to a thread
         
         self.voice_button.configure(state="disabled")
         self.voice_button.configure(text="Listening...")
@@ -322,6 +316,9 @@ class App(customtkinter.CTk):
         print(f"[INFO] Ending protocol ...")
         GPIO.output(self.GPIO_PIN_LED, GPIO.LOW)
         
+        self.glasgow_coma_scale_estimation()
+        self.dump_data()
+        
         self.voice_button.configure(state="normal")
         self.voice_button.configure(text="Start Voice Interaction")
 
@@ -329,31 +326,45 @@ class App(customtkinter.CTk):
         self.cpu_list.append(psutil.cpu_percent(interval=None))
         self.ram_list.append(psutil.virtual_memory().percent)
         self.swap_list.append(psutil.swap_memory().percent)
-        self.after(1000, self.monitor_resources)
+        if self.sampling:
+            self.after(1000, self.monitor_resources)
 
     def dump_data(self):
-        if not os.path.exists("../dump"):
-            os.makedirs("../dump")
-        
+        print("Dumping data...")
         time_stamp = time.strftime("%Y%m%d_%H%M%S")
+        
+        path = f"../dump/{time_stamp}_{self.inference_var.get()}"
+        
+        if not os.path.exists(path):
+            os.makedirs(path)
     
-        with open(f"../dump/fps_status_{time_stamp}.csv", "w", newline="") as csvfile:
+        with open(f"{path}/fps_status.csv", "w", newline="") as csvfile:
             writer = csv.writer(csvfile)
             writer.writerow(["ID","FPS"])
             for i, fps in enumerate(self.fps_list):
                 writer.writerow([i, fps])
         
-        with open(f"../dump/cpu_ram_swap_{self.inference_var.get()}_{time_stamp}.csv", "w", newline="") as csvfile:
+        with open(f"{path}/cpu_ram_swap.csv", "w", newline="") as csvfile:
             writer = csv.writer(csvfile)
             writer.writerow(["ID", "CPU_percent", "RAM_percent"," SWAP_percent"])
             for i, (cpu, ram, swap) in enumerate(zip(self.cpu_list, self.ram_list, self.swap_list)):
                 writer.writerow([i, cpu, ram, swap])
         
-        with open(f"../dump/inference_time_{self.inference_var.get()}_{time_stamp}.csv", "w", newline="") as csvfile:
+        with open(f"{path}/inference_time.csv", "w", newline="") as csvfile:
             writer = csv.writer(csvfile)
             writer.writerow(["ID", "Inference_Time"])
             for i, inference_time in enumerate(self.inference_time_list):
                 writer.writerow([i, inference_time])
+                
+        self.fps_list.clear()
+        self.cpu_list.clear()
+        self.ram_list.clear()
+        self.swap_list.clear()
+        self.eyes_status_list.clear()
+        self.movement_status_list.clear()
+        self.heart_rate_status_list.clear()
+        self.user_answers_list.clear()
+        self.inference_time_list.clear()        
 
 
     def glasgow_coma_scale_estimation(self):
@@ -398,7 +409,9 @@ class App(customtkinter.CTk):
 
         gcs_score = eye_score + movement_score + hr_score + user_answer_score
 
-        print(f"GCS: Eyes={eye_score}, Movement={movement_score}, HR={hr_score}, User Answers={user_answer_score} => Total={gcs_score}")
+        print(
+            f"GCS: Eyes={eye_score}, Movement={movement_score}, HR={hr_score}, User Answers={user_answer_score} => Total={gcs_score}"
+        )
       
         if gcs_score < 5:
             color = "red"
@@ -414,8 +427,6 @@ class App(customtkinter.CTk):
     def on_closing(self):
         print("Closing application...")
         self.running = False
-        print("Dumping data...")
-        self.dump_data()
         self.heart_rate_sensor.cleanup()
         GPIO.cleanup(self.GPIO_PIN_LED)
         self.destroy()
