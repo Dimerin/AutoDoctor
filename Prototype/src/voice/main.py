@@ -1,6 +1,6 @@
-from Prototype.src.voice.voice_agent import VoiceAgent
+from voice_agent import VoiceAgent
 
 
 if __name__ == "__main__":
-    voicea = VoiceAgent()
+    voicea = VoiceAgent("http://localhost:8080/inference")
     voicea.start_protocol(duration=5)

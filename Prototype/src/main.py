@@ -296,21 +296,14 @@ class App(customtkinter.CTk):
             server_url = "http://192.168.1.105:8080/inference"
         
         starting_time = time.time()
-        self.user_answer = self.voice_agent.start_protocol(
+        self.user_answers_list = self.voice_agent.start_protocol(
             server_url=server_url,duration=5
         )        
         elapsed_time = time.time() - starting_time
         self.inference_time_list.append(elapsed_time)       
         
-        self.user_answers_list.append(self.user_answer)
-        if self.user_answer == -1:
-            self.answer_label.configure(text="User Answer: Not recognized")
-        elif self.user_answer == -2 or self.user_answer == -3:
-            self.answer_label.configure(text="User Answer: Server Error")
-        else:
-            self.answer_label.configure(
-                text=f"User Answer: {'Yes' if self.user_answer == 1 else 'No'}"
-            )
+        user_answer = " ".join(self.user_answers_list)
+        self.answer_label.configure(text=f"User Answer: {user_answer}")
         
         self.sampling = False
         print(f"[INFO] Ending protocol ...")
