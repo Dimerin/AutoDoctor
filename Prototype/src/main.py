@@ -297,13 +297,13 @@ class App(customtkinter.CTk):
         
         starting_time = time.time()
         self.user_answers_list = self.voice_agent.start_protocol(
-            server_url=server_url,duration=5
+            server_url=server_url,duration=3
         )        
         elapsed_time = time.time() - starting_time
         self.inference_time_list.append(elapsed_time)       
         
-        user_answer = " ".join(self.user_answers_list)
-        self.answer_label.configure(text=f"User Answer: {user_answer}")
+        user_answer = ",".join(self.user_answers_list) #todo: implement a better gui for user answers
+        self.answer_label.configure(text=f"User Answers: {user_answer}")
         
         self.sampling = False
         print(f"[INFO] Ending protocol ...")
@@ -398,7 +398,7 @@ class App(customtkinter.CTk):
             hr_score = 0  # Out of range
 
         # Compute score from User Answers
-        user_answer_score = Counter(self.user_answers_list)[1]
+        user_answer_score = Counter(self.user_answers_list)["Yes"]
 
         gcs_score = eye_score + movement_score + hr_score + user_answer_score
 
