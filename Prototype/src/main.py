@@ -299,8 +299,9 @@ class App(customtkinter.CTk):
         self.user_answers_list, time_per_question = self.voice_agent.start_protocol(
             server_url=server_url,duration=3
         )        
-        elapsed_time = time.time() - starting_time
-        self.inference_time_list.append(elapsed_time)       
+        total_voice_protocol_agent = time.time() - starting_time
+        self.inference_time_list.extend(time_per_question)
+        self.inference_time_list.append(total_voice_protocol_agent)
         
         user_answer = ",".join(self.user_answers_list) #todo: implement a better gui for user answers
         self.answer_label.configure(text=f"User Answers: {user_answer}")
@@ -339,7 +340,7 @@ class App(customtkinter.CTk):
         
         with open(f"{path}/cpu_ram_swap.csv", "w", newline="") as csvfile:
             writer = csv.writer(csvfile)
-            writer.writerow(["ID", "CPU_percent", "RAM_percent"," SWAP_percent"])
+            writer.writerow(["ID", "CPU_percent", "RAM_percent","SWAP_percent"])
             for i, (cpu, ram, swap) in enumerate(zip(self.cpu_list, self.ram_list, self.swap_list)):
                 writer.writerow([i, cpu, ram, swap])
         

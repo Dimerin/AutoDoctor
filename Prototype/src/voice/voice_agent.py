@@ -151,7 +151,7 @@ class VoiceAgent:
             user_responses.append(results_queue.get())
         # TIME TRACKING
         time_per_question = []
-        while not results_queue.empty():
+        while not whisper_time_queue.empty():
             time_per_question.append(whisper_time_queue.get())
         # END TIME TRACKING
         print("[INFO] Protocollo completato.")
