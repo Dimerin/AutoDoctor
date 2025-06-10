@@ -129,11 +129,14 @@ class VoiceAgent:
             raise ValueError("Server URL must be provided or set in the constructor.")
         user_responses = []
         threads = []
+        user_times = []
         print("[INFO] Avvio del protocollo di registrazione e trascrizione...")
         print("[INFO] Asking the user to speak...")
         for i in range(1, 4):
+            start_user_time = time.time()
             self._reproduce_question(i)
             file = self._record_audio(duration)
+            user_times.append(time.time() - start_user_time)
             # Usa una coda thread-safe per raccogliere i risultati dalle thread
             if 'results_queue' not in locals():
                 results_queue = queue.Queue()
@@ -156,4 +159,4 @@ class VoiceAgent:
         # END TIME TRACKING
         print("[INFO] Protocollo completato.")
         print("[INFO] Risposte dell'utente:", user_responses)
-        return user_responses, time_per_question
+        return user_responses, time_per_question, user_times

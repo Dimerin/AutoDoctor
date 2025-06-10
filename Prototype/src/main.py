@@ -296,10 +296,11 @@ class App(customtkinter.CTk):
             server_url = "http://192.168.1.105:8080/inference"
         
         starting_time = time.time()
-        self.user_answers_list, time_per_question = self.voice_agent.start_protocol(
+        self.user_answers_list, time_per_question, user_times = self.voice_agent.start_protocol(
             server_url=server_url,duration=3
         )        
         total_voice_protocol_agent = time.time() - starting_time
+        self.inference_time_list.extend(user_times)
         self.inference_time_list.extend(time_per_question)
         self.inference_time_list.append(total_voice_protocol_agent)
         
