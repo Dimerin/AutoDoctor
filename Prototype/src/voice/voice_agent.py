@@ -99,7 +99,10 @@ class VoiceAgent:
             print("[INFO] Risposta non riconosciuta come sì o no.")
             return "Unknown"
 
-    def send_and_process(self, file, results_queue):
+    def send_and_process(self, file, results_queue, whisper_time_queue):
+        # TIME TRACKING
+        starting_time = time.time()
+        # END TIME TRACKING
         try:
             testo = self._send_audio(file)
         except Exception as e:
@@ -115,6 +118,9 @@ class VoiceAgent:
         print("[INFO] Start processing...")
         result = self._process_text(testo)
         results_queue.put(result)
+        # TIME TRACKING
+        whisper_time_queue.put(time.time() - starting_time)
+        # END TIME TRACKING
     
     def start_protocol(self, server_url = None, duration=3):
         if server_url is not None:
@@ -131,7 +137,11 @@ class VoiceAgent:
             # Usa una coda thread-safe per raccogliere i risultati dalle thread
             if 'results_queue' not in locals():
                 results_queue = queue.Queue()
-            thread = threading.Thread(target=self.send_and_process, args=(file, results_queue))
+            # TIME TRACKING
+            if 'whisper_time_queue' not in locals():
+                whisper_time_queue = queue.Queue()
+            # END TIME TRACKING
+            thread = threading.Thread(target=self.send_and_process, args=(file, results_queue, whisper_time_queue))
             thread.start()
             threads.append(thread)
         for thread in threads:
@@ -139,6 +149,11 @@ class VoiceAgent:
         # Raccogli i risultati dalla coda
         while not results_queue.empty():
             user_responses.append(results_queue.get())
+        # TIME TRACKING
+        time_per_question = []
+        while not results_queue.empty():
+            time_per_question.append(whisper_time_queue.get())
+        # END TIME TRACKING
         print("[INFO] Protocollo completato.")
         print("[INFO] Risposte dell'utente:", user_responses)
-        return user_responses
+        return user_responses, time_per_question
