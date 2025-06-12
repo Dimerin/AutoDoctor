@@ -1,3 +1,13 @@
+customtkinter==5.2.2
 dlib==19.24.8
 numpy==1.24.4
 opencv_python==4.11.0.86
+picamera2==0.3.27
+Pillow==9.4.0
+Prototype==0.2
+psutil==5.9.4
+python_vlc==3.0.21203
+Requests==2.32.4
+rpi_lgpio==0.6
+scipy==1.15.3
+sounddevice==0.5.2
