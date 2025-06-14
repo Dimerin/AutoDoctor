@@ -59,10 +59,9 @@ class EyeTracker:
                     winSize=(15, 15), maxLevel=2,
                     criteria=(cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 10, 0.03)
                 )
-                
-                # Controllo per evitare errori se Optical Flow fallisce
+   
                 if next_points is None or status is None or len(status) == 0:
-                    self.prev_points = None  # resetta per tentare di riprendere tracking nel prossimo frame
+                    self.prev_points = None  
                     self.prev_gray = frame_gray.copy()
                     self.movement_status = "Tracking Failed"
                     self.eye_state = "Unknown"
@@ -72,7 +71,7 @@ class EyeTracker:
                 good_prev = self.prev_points[status == 1]
                 good_next = next_points[status == 1]
                 
-                # Se nessun punto valido è stato tracciato
+
                 if len(good_prev) == 0 or len(good_next) == 0:
                     self.prev_points = None
                     self.prev_gray = frame_gray.copy()

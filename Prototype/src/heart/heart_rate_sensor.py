@@ -19,11 +19,11 @@ class HeartRateSensor:
         GPIO.add_event_detect(
             self._gpio_pin_hr,
             GPIO.RISING,
-            callback=self._default_ISR,
+            callback=self.heart_rate_ISR,
             bouncetime=260
         )
         
-    def _default_ISR(self, channel):
+    def heart_rate_ISR(self, channel):
         if channel != self._gpio_pin_hr:
             return
         current_time = Time.time()
@@ -31,11 +31,8 @@ class HeartRateSensor:
             interval = current_time - self._last_pulse_time
             if interval > 0:
                 bpm = 60 / interval
-                #print(f"Battito rilevato (INT): BPM = {bpm:.1f}")
                 with self._semaphore_hr:
                     self._last_heart_rate_sample = bpm
- 
-                # print("Primo impulso rilevato (INT)...")
 
         self._last_pulse_time = current_time
 

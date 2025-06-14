@@ -47,33 +47,32 @@ class App(customtkinter.CTk):
             "hidden": customtkinter.CTkImage(light_image=Image.open("assets/hidden.png"), size=(50, 50)),
         }
         self.movement_icons = {
-            "moving": customtkinter.CTkImage(light_image=Image.open("assets/eye_movement.png"), size=(50, 50)),
-            "stationary": customtkinter.CTkImage(light_image=Image.open("assets/eye_stationary.png"), size=(50, 50)),
+            "moving": customtkinter.CTkImage(light_image=Image.open("assets/run.png"), size=(50, 50)),
+            "stationary": customtkinter.CTkImage(light_image=Image.open("assets/hand.png"), size=(50, 50)),
             "hidden": customtkinter.CTkImage(light_image=Image.open("assets/hidden.png"), size=(50, 50)),
         }
 
 
-        # FRAME CONTENITORE RIGA 1
+        # Container First Row
         self.top_frame = customtkinter.CTkFrame(self)
         self.top_frame.grid(row=0, column=0, sticky="nsew", padx=20, pady=(10,10))
 
-        # FRAME CONTENITORE RIGA 2
+        # Container Second Row
         self.bottom_frame = customtkinter.CTkFrame(self)
         self.bottom_frame.grid(row=1, column=0, sticky="ew", padx=20, pady=(0, 20))
 
-        # CONFIGURAZIONE PESI PER RIDIMENSIONAMENTO AUTOMATICO
         self.grid_rowconfigure(0, weight=1)
         self.grid_rowconfigure(1, weight=0)
         self.grid_columnconfigure(0, weight=1)
 
-        # FRAME SINISTRO (CAMERA) NELLA PRIMA RIGA
+        # Left frame (Camera)
         self.camera_frame = customtkinter.CTkFrame(self.top_frame, width=640, height=480)
         self.camera_frame.grid(row=0, column=0, padx=10, pady=10, sticky="n")
 
         self.camera_label = customtkinter.CTkLabel(self.camera_frame, text="")
         self.camera_label.pack(padx=10, pady=10)
 
-        # FRAME DESTRO (DATI) NELLA PRIMA RIGA
+        # Right frame (Data Display)
         self.data_frame = customtkinter.CTkFrame(self.top_frame)
         self.data_frame.grid(row=0, column=1, padx=10, pady=10, sticky="n")
 
@@ -193,7 +192,6 @@ class App(customtkinter.CTk):
         GPIO.setwarnings(False)
         GPIO.setup(self.GPIO_PIN_LED, GPIO.OUT)
         self.running = True
-
         self.tracker = EyeTracker("eyes/shape_predictor_68_face_landmarks.dat")
         self.camera = CameraHandler()
         self.heart_rate_sensor = HeartRateSensor(gpio_pin_hr=self.GPIO_PIN_HR)
@@ -370,9 +368,9 @@ class App(customtkinter.CTk):
         # Most frequent eye state
         eye_state = Counter(self.eyes_status_list).most_common(1)[0][0]
         if eye_state == "Open":
-            eye_score = 3
+            eye_score = 5
         elif eye_state == "Slightly Closed":
-            eye_score = 2
+            eye_score = 3
         elif eye_state == "Closed":
             eye_score = 1
         else:
@@ -381,31 +379,28 @@ class App(customtkinter.CTk):
         # Most frequent movement state
         movement_state = Counter(self.movement_status_list).most_common(1)[0][0]
         if movement_state == "Moving":
-            movement_score = 2
+            movement_score = 5
         elif movement_state == "Stationary":
-            movement_score = 1
+            movement_score = 2
         else:
             movement_score = 0  # Unknown state
 
-        # Avger heart rate
-        heart_rate = statistics.mean(self.heart_rate_status_list)
-        
-        if 50<= heart_rate < 80:
-            hr_score = 3
-        elif 80 <= heart_rate < 100:
-            hr_score = 2
-        elif heart_rate >= 100:
-            hr_score = 1
-        else:
-            hr_score = 0  # Out of range
-
         # Compute score from User Answers
-        user_answer_score = Counter(self.user_answers_list)["Yes"]
+        yes_count = self.user_answers_list.count("Yes")
 
-        gcs_score = eye_score + movement_score + hr_score + user_answer_score
+        if yes_count == 3:
+            user_answer_score = 5
+        elif yes_count == 2:
+            user_answer_score = 4
+        elif yes_count == 1:
+            user_answer_score = 2
+        else:
+            user_answer_score = 1
+
+        gcs_score = eye_score + movement_score + user_answer_score
 
         print(
-            f"GCS: Eyes={eye_score}, Movement={movement_score}, HR={hr_score}, User Answers={user_answer_score} => Total={gcs_score}"
+            f"GCS: Eyes={eye_score}, Movement={movement_score} , User Answers={user_answer_score} => Total={gcs_score}"
         )
       
         if gcs_score < 5:
