@@ -313,7 +313,7 @@ class App(customtkinter.CTk):
         self.dump_data()
         
         self.voice_button.configure(state="normal")
-        self.voice_button.configure(text="Start Voice Interaction")
+        self.voice_button.configure(text="Estimate GCS")
 
     def monitor_resources(self):
         self.cpu_list.append(psutil.cpu_percent(interval=None))
