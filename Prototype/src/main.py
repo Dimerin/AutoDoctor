@@ -23,7 +23,7 @@ class App(customtkinter.CTk):
     
     def __init__(self):
         super().__init__()
-        self.geometry("1152x600")
+        self.geometry("1152x700")
         self.title("Demo prototype AutoDoctor GUI")
         self.resizable(False, False)
         self.last_heart_rate_sample = None
@@ -49,7 +49,7 @@ class App(customtkinter.CTk):
         self.movement_icons = {
             "moving": customtkinter.CTkImage(light_image=Image.open("assets/run.png"), size=(50, 50)),
             "stationary": customtkinter.CTkImage(light_image=Image.open("assets/hand.png"), size=(50, 50)),
-            "hidden": customtkinter.CTkImage(light_image=Image.open("assets/hidden.png"), size=(50, 50)),
+            "hidden": customtkinter.CTkImage(light_image=Image.open("assets/touch-face.png"), size=(50, 50)),
         }
 
 
@@ -112,7 +112,7 @@ class App(customtkinter.CTk):
         self.heart_rate_frame.pack(padx=10, pady=(20, 10), fill="x")
         self.heart_rate_status = customtkinter.CTkLabel(
             self.heart_rate_frame,
-            text="  Heart Rate: Waiting for data...",
+            text="  HR: Waiting for data...",
             image=self.heart_photo,
             compound="left", 
             text_color="red",
@@ -183,7 +183,7 @@ class App(customtkinter.CTk):
 
         self.voice_button = customtkinter.CTkButton(
             self.bottom_frame,
-            text="Start Voice Interaction",
+            text="Estimate GCS",
             command=lambda: threading.Thread(target=self.start_gcs_protocol, daemon=True).start()
         )
         self.voice_button.pack(side="right", padx=10, pady=10)   
@@ -265,19 +265,25 @@ class App(customtkinter.CTk):
     def update_gui_heart_rate(self):
         if self.last_heart_rate_sample is not None:
             hr = self.last_heart_rate_sample
-            if 50 <= hr < 80:
+            if 60 <= hr < 100:
                 color = "green"
-            elif 80 <= hr < 100:
+                hr_classification = "Normocardic"
+            elif 20 <= hr < 59:
                 color = "orange"
-            else:
+                hr_classification = "Bradycardic"
+            elif hr >= 100:
                 color = "red"
+                hr_classification = "Tachycardic"
+            else: 
+                color = "red"
+                hr_classification = "Asistolic"
             self.heart_rate_status.configure(
-                text=f"  Heart Rate: {hr:.1f} BPM",
+                text=f"  HR: {hr:.1f} BPM\n  Status: {hr_classification}",
                 text_color=color
             )
         else:
-            self.heart_rate_status.configure(text="  Heart Rate: Waiting for data...", text_color="white")
-            
+            self.heart_rate_status.configure(text="  HR: Waiting for data...", text_color="white")
+
     def start_gcs_protocol(self):
         print("[INFO] Starting protocol ...")
         self.sampling = True
@@ -302,8 +308,16 @@ class App(customtkinter.CTk):
         self.inference_time_list.extend(time_per_question)
         self.inference_time_list.append(total_voice_protocol_agent)
         
-        user_answer = ",".join(self.user_answers_list) #todo: implement a better gui for user answers
-        self.answer_label.configure(text=f"User Answers: {user_answer}")
+        user_answers_list = self.user_answers_list  # or pass as argument
+
+        answers_text = "User Answers:\n" + "\n".join(
+            [
+                f"{i+1}° Question: {ans if ans in ['Yes','No'] else '-'}"
+                for i, ans in enumerate(user_answers_list[:3])
+            ]
+        )
+
+        self.answer_label.configure(text=answers_text)
         
         self.sampling = False
         print(f"[INFO] Ending protocol ...")
@@ -313,7 +327,7 @@ class App(customtkinter.CTk):
         self.dump_data()
         
         self.voice_button.configure(state="normal")
-        self.voice_button.configure(text="Start Voice Interaction")
+        self.voice_button.configure(text="Estimate GCS")
 
     def monitor_resources(self):
         self.cpu_list.append(psutil.cpu_percent(interval=None))
@@ -361,7 +375,7 @@ class App(customtkinter.CTk):
 
 
     def glasgow_coma_scale_estimation(self):
-        if not self.eyes_status_list or not self.movement_status_list or not self.heart_rate_status_list or not self.user_answers_list:
+        if not self.eyes_status_list or not self.movement_status_list or not self.user_answers_list:
             print("No data available for GCS estimation.")
             return 
 
@@ -403,14 +417,12 @@ class App(customtkinter.CTk):
             f"GCS: Eyes={eye_score}, Movement={movement_score} , User Answers={user_answer_score} => Total={gcs_score}"
         )
       
-        if gcs_score < 5:
+        if gcs_score <= 5:
             color = "red"
-        elif gcs_score < 8:
+        elif gcs_score <= 9:
             color = "orange"
-        elif gcs_score > 11:
+        elif gcs_score >= 10:
             color = "green"
-        else:
-            color = "white"
 
         self.gcs_label.configure(text=f"GCS: {gcs_score}", text_color=color)
 
