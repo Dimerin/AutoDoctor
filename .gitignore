@@ -2,6 +2,7 @@
 /imgs
 /Prototype/AImodels
 /Prototype/analysis/data/*
+/Prototype/analysis/img/*
 IA
 *pyc
 dump
