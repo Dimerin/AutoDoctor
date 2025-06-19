@@ -38,7 +38,17 @@ class App(customtkinter.CTk):
         self.fps_list = []
         self.cpu_list = []
         self.ram_list = []
+        self.cpu_self_list = []
+        self.cpu_whisper_list = []
+        self.cpu_labwc_list = []
         self.sampling = False
+        
+        self._targets = {
+            "self":    psutil.Process(),
+            "whisper": self._find_proc("whisper-server"),
+            "labwc":   self._find_proc("labwc"),
+        }
+    
             
         self.eye_icons = {
             "open": customtkinter.CTkImage(light_image=Image.open("assets/eye_open.png"), size=(50, 50)),
@@ -198,7 +208,20 @@ class App(customtkinter.CTk):
         self.voice_agent = VoiceAgent()
         self.heart_rate_sensor.setup()
         self.video_thread = threading.Thread(target=self.update_window, daemon=True)
-        self.video_thread.start()        
+        self.video_thread.start()      
+        
+    def _find_proc(self, name : str):
+        for proc in psutil.process_iter(['name', 'cmdline']):
+            try:
+                if (proc.info['name'] and name in proc.info['name']) or \
+                   (proc.info['cmdline'] and name in " ".join(proc.info['cmdline'])):
+                    return proc
+            except (psutil.NoSuchProcess, psutil.AccessDenied):
+                print("[ERROR] Could not access process information.")
+                pass
+        print(f"[INFO] Process '{name}' not found.")
+        return None
+          
  
     def update_window(self):
         self.prev_time = time.time()
@@ -289,6 +312,10 @@ class App(customtkinter.CTk):
         self.sampling = True
         GPIO.output(self.GPIO_PIN_LED, GPIO.HIGH)
         
+        for p in self._targets.values():
+            if p is not None:
+                p.cpu_percent(None)
+        
         self.monitor_resources() ## todo: switch to a thread
         
         self.voice_button.configure(state="disabled")
@@ -333,8 +360,40 @@ class App(customtkinter.CTk):
         self.cpu_list.append(psutil.cpu_percent(interval=None))
         self.ram_list.append(psutil.virtual_memory().percent)
         self.swap_list.append(psutil.swap_memory().percent)
+                
+        for label, proc in self._targets.items():
+            if proc is None and label == "whisper" and self.inference_var.get() == "remote":
+                self._append_cpu(label, 0.0)
+                continue
+            # se il processo non esiste più, prova a ritrovarlo
+            if proc is None or not proc.is_running():
+                proc = self._find_proc("whisper-server" if label=="whisper"
+                                        else "labwc" if label=="labwc"
+                                        else "")
+                self._targets[label] = proc
+                # anche se l’hai ritrovato ora, .cpu_percent(None) deve essere
+                # chiamato una prima volta → restituisce 0 e inizializza
+                if proc: proc.cpu_percent(None)
+                self._append_cpu(label, 0.0)
+                continue
+
+            try:
+                cpu = proc.cpu_percent(interval=None)   # % dall’ultima misura
+            except (psutil.NoSuchProcess, psutil.AccessDenied):
+                print(f"[ERROR] Could not access process {label} information.")
+                cpu = 0.0
+                self._targets[label] = None
+            self._append_cpu(label, cpu)
+        
         if self.sampling:
             self.after(1000, self.monitor_resources)
+    
+    def _append_cpu(self, label, value):
+        {
+            "self":    self.cpu_self_list,
+            "whisper": self.cpu_whisper_list,
+            "labwc":   self.cpu_labwc_list,
+        }[label].append(value)
 
     def dump_data(self):
         print("Dumping data...")
@@ -363,6 +422,14 @@ class App(customtkinter.CTk):
             for i, inference_time in enumerate(self.inference_time_list):
                 writer.writerow([i, inference_time])
                 
+        with open(f"{path}/cpu_per_process.csv", "w", newline="") as csvfile:
+            writer = csv.writer(csvfile)
+            writer.writerow(["ID", "CPU_self", "CPU_whisper", "CPU_labwc"])
+            for i, (self_cpu, whisper_cpu, labwc_cpu) in enumerate(
+                zip(self.cpu_self_list, self.cpu_whisper_list, self.cpu_labwc_list)
+                ):
+                writer.writerow([i, self_cpu, whisper_cpu, labwc_cpu])
+                
         self.fps_list.clear()
         self.cpu_list.clear()
         self.ram_list.clear()
@@ -371,7 +438,10 @@ class App(customtkinter.CTk):
         self.movement_status_list.clear()
         self.heart_rate_status_list.clear()
         self.user_answers_list.clear()
-        self.inference_time_list.clear()        
+        self.inference_time_list.clear()     
+        self.cpu_labwc_list.clear()
+        self.cpu_self_list.clear()
+        self.cpu_whisper_list.clear()   
 
 
     def glasgow_coma_scale_estimation(self):
