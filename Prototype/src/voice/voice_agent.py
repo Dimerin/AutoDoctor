@@ -13,7 +13,7 @@ class VoiceAgent:
         self.sample_rate = sample_rate
         self.tmp_dir = Path("tmp")
         self.tmp_dir.mkdir(exist_ok=True)
-        self.media_path = Path("../media")  # Assuming media files are stored in a 'media' directory
+        self.media_path = Path("media")  # Assuming media files are stored in a 'media' directory
         self.server_url = server_url
 
     def _genera_nome_file(self):

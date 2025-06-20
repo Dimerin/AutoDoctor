@@ -192,7 +192,7 @@ class App(customtkinter.CTk):
         GPIO.setwarnings(False)
         GPIO.setup(self.GPIO_PIN_LED, GPIO.OUT)
         self.running = True
-        self.tracker = EyeTracker("eyes/shape_predictor_68_face_landmarks.dat")
+        self.tracker = EyeTracker("models/shape_predictor_68_face_landmarks.dat")
         self.camera = CameraHandler()
         self.heart_rate_sensor = HeartRateSensor(gpio_pin_hr=self.GPIO_PIN_HR)
         self.voice_agent = VoiceAgent()
