@@ -50,5 +50,3 @@ Intelligent monitoring of human health conditions during autonomous car-sharing 
 2. *Find the technology to implement the project*: we cannot spend too much on hardware implementation; take what is needed and nothing more.
 
 Work package: it exists throughout the life of the product, once a month we meet to see that
-
-RICORDA: **CoDiFiCaRE NoN è iL FuTuRo!**
